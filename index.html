@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TutorBridgeHK — 免中介費補習配對平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- 一般瀏覽器 -->
+    <link rel="icon" type="image/png" sizes="32x32" href="tutorbridgehkicon3.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="tutorbridgehkicon3.png">
+    <!-- Apple 裝置 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="tutorbridgehkicon3.png">
+    <!-- Android 裝置 -->
+    <link rel="manifest" href="tutorbridgehkicon3.png">
+    <!-- 内联脚本：立即设置导航栏状态，防止闪烁 -->
+    <script>
+        (function() {
+            try {
+                const storedProfile = localStorage.getItem('tutorbridge_profile');
+                if (storedProfile) {
+                    const profile = JSON.parse(storedProfile);
+                    // 创建临时样式来立即隐藏默认导航栏，显示用户菜单
+                    const style = document.createElement('style');
+                    style.id = 'nav-state-style';
+                    style.textContent = '#authButtons { display: none !important; } #userMenu { display: flex !important; }';
+                    document.head.appendChild(style);
+                    
+                    // 设置问候语的内容，等DOM加载后
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const userGreeting = document.getElementById('userGreeting');
+                        if (userGreeting) {
+                            userGreeting.textContent = '你好, ' + (profile.name || '用戶');
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error('恢复导航栏状态失败:', e);
+            }
+        })();
+    </script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">
+                    <img src = "tutorbridgehkicon3.png" alt="思橋 TutorBridgeHK" style="height: 60px; width: auto;">
+                    TutorBridgeHK
+                </a>
+                <nav class="nav-links">
+                    <div id="authButtons" style="display:flex; gap:24px; align-items:center;">
+                        <a class="nav-link" href="index.html">首頁</a>
+                        <a class="btn btn-secondary btn-small" href="auth.html">登入/註冊</a>
+                    </div>
+                    <div id="userMenu" class="user-menu" style="display:none; gap:24px; align-items:center;">
+                        <span class="user-greeting" id="userGreeting"></span>
+                        <a class="nav-link" href="index.html">首頁</a>
+                        <a class="nav-link" href="match.html">📋 配對列表</a>
+                        <a class="nav-link" href="post.html">發布Post</a>
+                        <a class="nav-link" href="messages.html">訊息</a>
+                        <a class="nav-link" href="profile.html">個人檔案</a>
+                        <button class="btn btn-logout btn-small" onclick="logout()">登出</button>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>TutorBridgeHK — 免中介費補習配對平台</h1>
+            <p class="hero-subtitle">學生導師 · 免費配對 · 不收中介費</p>
+            <p class="hero-tagline">「搭起學習的橋樑。」</p>
+        </div>
+    </section>
+
+    <main class="main-content">
+        <div class="container">
+            <p style="text-align: center; font-size: 18px; color: #64748B; margin-top: 24px; margin-bottom: 24px;">
+                以下是在本平台上註冊的優質導師
+            </p>
+            <div id="tutorsList" class="tutors-grid">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <h3>載入中...</h3>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-disclaimer">
+                    <strong>免責聲明：</strong><br>
+                    本平台為免費資訊展示平台，僅提供Post發布及申請功能。平台不涉及任何金錢交易，所有導師資料均由導師自行填寫，平台不會對其真實性進行驗證。用戶應自行判斷導師的適合性。平台對導師所提供的資料真實性及教學質素概不負責。
+                </div>
+                <div class="footer-disclaimer">
+                    <strong>私隱政策：</strong><br>
+                    平台收集你的電郵地址、電話號碼及姓名，僅用作帳戶註冊、登入驗證及防止私下交易之用。平台不會將你的電話號碼公開顯示在任何頁面上。平台不會將你的個人資料出售或轉讓予第三方。你可隨時聯絡我們要求刪除帳戶及相關資料。
+                </div>
+            </div>
+            <div class="footer-bottom">
+                © 2024 TutorBridgeHK. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 確保 loadTutors 在頁面載入後調用
+            if (typeof loadTutors === 'function') {
+                loadTutors();
+            }
+        });
+    </script>
+</body>
+</html>

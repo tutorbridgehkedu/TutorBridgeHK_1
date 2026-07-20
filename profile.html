@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TutorBridgeHK — 個人檔案</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- 一般瀏覽器 -->
+    <link rel="icon" type="image/png" sizes="32x32" href="tutorbridgehkicon3.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="tutorbridgehkicon3.png">
+    <!-- Apple 裝置 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="tutorbridgehkicon3.png">
+    <!-- Android 裝置 -->
+    <link rel="manifest" href="tutorbridgehkicon3.png">
+    <!-- 内联脚本：立即设置导航栏状态，防止闪烁 -->
+    <script>
+        (function() {
+            try {
+                const storedProfile = localStorage.getItem('tutorbridge_profile');
+                if (storedProfile) {
+                    const profile = JSON.parse(storedProfile);
+                    // 创建临时样式来立即隐藏默认导航栏，显示用户菜单
+                    const style = document.createElement('style');
+                    style.id = 'nav-state-style';
+                    style.textContent = '#authButtons { display: none !important; } #userMenu { display: flex !important; }';
+                    document.head.appendChild(style);
+                    
+                    // 设置问候语的内容，等DOM加载后
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const userGreeting = document.getElementById('userGreeting');
+                        if (userGreeting) {
+                            userGreeting.textContent = '你好, ' + (profile.name || '用戶');
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error('恢复导航栏状态失败:', e);
+            }
+        })();
+    </script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">
+                    <img src = "tutorbridgehkicon3.png" alt="思橋 TutorBridgeHK" style="height: 60px; width: auto;">
+                    TutorBridgeHK
+                </a>
+                <nav class="nav-links">
+                    <div id="authButtons" style="display:flex; gap:24px; align-items:center;">
+                        <a class="nav-link" href="index.html">首頁</a>
+                        <a class="btn btn-secondary btn-small" href="auth.html">登入/註冊</a>
+                    </div>
+                    <div id="userMenu" class="user-menu" style="display:none; gap:24px; align-items:center;">
+                        <span class="user-greeting" id="userGreeting"></span>
+                        <a class="nav-link" href="index.html">首頁</a>
+                        <a class="nav-link" href="match.html">📋 配對列表</a>
+                        <a class="nav-link" href="post.html">發布Post</a>
+                        <a class="nav-link" href="messages.html">訊息</a>
+                        <a class="nav-link" href="profile.html">個人檔案</a>
+                        <button class="btn btn-logout btn-small" onclick="logout()">登出</button>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>TutorBridgeHK — 免中介費補習配對平台</h1>
+            <p class="hero-subtitle">學生導師 · 免費配對 · 不收中介費</p>
+        </div>
+    </section>
+
+    <main class="main-content">
+        <div class="container">
+            <div id="profileContent" class="profile-container">
+                <div class="empty-state">載入中...</div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-bottom">
+                © 2024 TutorBridgeHK. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div id="deletePostModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">確認刪除</h3>
+                <button class="modal-close" onclick="closeModal('deletePostModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 24px;">確定要刪除此 Post 嗎？此動作無法復原。</p>
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal('deletePostModal')">取消</button>
+                    <button type="button" class="btn btn-danger" style="flex: 1;" onclick="confirmDeletePost()">確認刪除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="avatarUploadModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">上傳頭像</h3>
+                <button class="modal-close" onclick="closeModal('avatarUploadModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="avatarUploadForm">
+                    <div class="form-group">
+                        <label>選擇圖片</label>
+                        <input type="file" class="form-control" id="avatarFile" accept="image/jpeg,image/png,image/webp" required>
+                        <p style="font-size: 12px; color: var(--gray-600); margin-top: 8px;">支援 JPG, PNG, WEBP，最大 5MB</p>
+                    </div>
+                    <div class="form-group" id="avatarPreviewContainer" style="display: none; text-align: center;">
+                        <label>預覽</label>
+                        <img id="avatarPreview" style="max-width: 200px; border-radius: 50%; margin-top: 10px;">
+                    </div>
+                    <button type="button" class="btn btn-primary" style="width:100%;" onclick="handleAvatarUpload()">上傳</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="reviewModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">撰寫評價</h3>
+                <button class="modal-close" onclick="closeModal('reviewModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="reviewForm" onsubmit="handleReview(event)">
+                    <div class="form-group">
+                        <label>評分</label>
+                        <div class="star-rating" id="starRating">
+                            <span class="star" data-rating="1">★</span>
+                            <span class="star" data-rating="2">★</span>
+                            <span class="star" data-rating="3">★</span>
+                            <span class="star" data-rating="4">★</span>
+                            <span class="star" data-rating="5">★</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>評價內容</label>
+                        <textarea class="form-control" id="reviewComment" rows="4"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">提交評價</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 先檢查是否已登入
+            if (!currentUser) {
+                // 我們需要等待 checkAuth 完成
+                const checkAuthInterval = setInterval(() => {
+                    if (isAuthReady) {
+                        clearInterval(checkAuthInterval);
+                        if (!currentUser) {
+                            window.location.href = 'auth.html';
+                            return;
+                        }
+                        if (typeof loadProfilePage === 'function') {
+                            loadProfilePage();
+                        }
+                    }
+                }, 100);
+            } else {
+                if (typeof loadProfilePage === 'function') {
+                    loadProfilePage();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

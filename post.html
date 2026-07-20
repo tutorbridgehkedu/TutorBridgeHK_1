@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TutorBridgeHK — 發布Post</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- 一般瀏覽器 -->
+    <link rel="icon" type="image/png" sizes="32x32" href="tutorbridgehkicon3.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="tutorbridgehkicon3.png">
+    <!-- Apple 裝置 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="tutorbridgehkicon3.png">
+    <!-- Android 裝置 -->
+    <link rel="manifest" href="tutorbridgehkicon3.png">
+    <!-- 内联脚本：立即设置导航栏状态，防止闪烁 -->
+    <script>
+        (function() {
+            try {
+                const storedProfile = localStorage.getItem('tutorbridge_profile');
+                if (storedProfile) {
+                    const profile = JSON.parse(storedProfile);
+                    // 创建临时样式来立即隐藏默认导航栏，显示用户菜单
+                    const style = document.createElement('style');
+                    style.id = 'nav-state-style';
+                    style.textContent = '#authButtons { display: none !important; } #userMenu { display: flex !important; }';
+                    document.head.appendChild(style);
+                    
+                    // 设置问候语的内容，等DOM加载后
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const userGreeting = document.getElementById('userGreeting');
+                        if (userGreeting) {
+                            userGreeting.textContent = '你好, ' + (profile.name || '用戶');
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error('恢复导航栏状态失败:', e);
+            }
+        })();
+    </script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">
+                    <img src = "tutorbridgehkicon3.png" alt="思橋 TutorBridgeHK" style="height: 60px; width: auto;">
+                    TutorBridgeHK
+                </a>
+                <nav class="nav-links">
+                    <div id="authButtons" style="display:flex; gap:24px; align-items:center;">
+                        <a class="nav-link" href="index.html">首頁</a>
+                        <a class="btn btn-secondary btn-small" href="auth.html">登入/註冊</a>
+                    </div>
+                    <div id="userMenu" class="user-menu" style="display:none; gap:24px; align-items:center;">
+                        <span class="user-greeting" id="userGreeting"></span>
+                        <a class="nav-link" href="index.html">首頁</a>
+                        <a class="nav-link" href="match.html">📋 配對列表</a>
+                        <a class="nav-link" href="post.html">發布Post</a>
+                        <a class="nav-link" href="messages.html">訊息</a>
+                        <a class="nav-link" href="profile.html">個人檔案</a>
+                        <button class="btn btn-logout btn-small" onclick="logout()">登出</button>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>TutorBridgeHK — 免中介費補習配對平台</h1>
+            <p class="hero-subtitle">學生導師 · 免費配對 · 不收中介費</p>
+        </div>
+    </section>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="create-post-container">
+                <h2 style="margin-bottom:24px;" id="createPostTitle">發布新Post</h2>
+                <form id="createPostForm" class="profile-card create-post-form" onsubmit="handleCreatePost(event)">
+                    <div class="form-group">
+                        <label>標題</label>
+                        <input type="text" class="form-control" id="postTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label>科目</label>
+                        <select class="form-control" id="postSubject" required>
+                            <optgroup label="幼稚園">
+                                <option value="幼稚園中文">中文</option>
+                                <option value="幼稚園英文">英文</option>
+                                <option value="幼稚園數學">數學</option>
+                            </optgroup>
+                            <optgroup label="小學">
+                                <option value="小學中文">中文</option>
+                                <option value="小學英文">英文</option>
+                                <option value="小學數學">數學</option>
+                                <option value="小學常識">常識</option>
+                            </optgroup>
+                            <optgroup label="中學核心科目">
+                                <option value="中文">中文</option>
+                                <option value="英文">英文</option>
+                                <option value="數學">數學</option>
+                                <option value="公民與社會發展">公民與社會發展</option>
+                            </optgroup>
+                            <optgroup label="中學文科">
+                                <option value="中國文學">中國文學</option>
+                                <option value="英語文學">英語文學</option>
+                                <option value="中國歷史">中國歷史</option>
+                                <option value="歷史">歷史</option>
+                                <option value="地理">地理</option>
+                            </optgroup>
+                            <optgroup label="中學商科">
+                                <option value="經濟">經濟</option>
+                                <option value="企業、會計與財務概論">企業、會計與財務概論</option>
+                            </optgroup>
+                            <optgroup label="中學理科">
+                                <option value="生物">生物</option>
+                                <option value="化學">化學</option>
+                                <option value="物理">物理</option>
+                            </optgroup>
+                            <optgroup label="中學其他選修">
+                                <option value="倫理與宗教">倫理與宗教</option>
+                                <option value="旅遊與款待">旅遊與款待</option>
+                                <option value="設計與應用科技">設計與應用科技</option>
+                                <option value="健康管理與社會關懷">健康管理與社會關懷</option>
+                                <option value="資訊及通訊科技">資訊及通訊科技</option>
+                                <option value="科技與生活">科技與生活</option>
+                            </optgroup>
+                            <optgroup label="中學術科">
+                                <option value="音樂">音樂</option>
+                                <option value="視覺藝術">視覺藝術</option>
+                                <option value="體育">體育</option>
+                            </optgroup>
+                            <optgroup label="其他">
+                                <option value="大專">大專</option>
+                                <option value="大學">大學</option>
+                                <option value="成人">成人</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>上課模式</label>
+                        <select class="form-control" id="postTeachingMode" required>
+                            <option value="面對面授課">面對面授課</option>
+                            <option value="視像補習">視像補習</option>
+                            <option value="兩者皆可">兩者皆可</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>地區（可多選，包含線上補習）</label>
+                        <div id="postDistrictOptions"></div>
+                    </div>
+                    <div class="form-group" id="budgetField">
+                        <label>預算（每小時港幣）</label>
+                        <input type="number" class="form-control" id="postBudget" placeholder="例如：150">
+                    </div>
+                    <div class="form-group" id="rateField" style="display:none;">
+                        <label>收費（每小時港幣）</label>
+                        <input type="number" class="form-control" id="postRate" placeholder="例如：180">
+                    </div>
+                    <div class="form-group" id="qualificationField">
+                        <label>期望導師學歷 / 你的學歷</label>
+                        <input type="text" class="form-control" id="postQualification" placeholder="例如：大學一年級、DSE 5科5**">
+                    </div>
+                    <div class="form-group" id="experienceField" style="display:none;">
+                        <label>教學經驗</label>
+                        <input type="text" class="form-control" id="postExperience" placeholder="例如：3年補習經驗">
+                    </div>
+                    <div class="form-group">
+                        <label>詳細描述</label>
+                        <textarea class="form-control" id="postDescription" rows="5" required></textarea>
+                    </div>
+                    <div class="disclaimer">
+                        注意：請勿在描述中留下電話號碼、WhatsApp、IG、Facebook等聯絡方式，Post將會被自動攔截。請使用平台的申請功能聯絡。
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top:20px;">發布Post</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-bottom">
+                © 2024 TutorBridgeHK. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 先檢查是否已登入
+            if (!currentUser) {
+                const checkAuthInterval = setInterval(() => {
+                    if (isAuthReady) {
+                        clearInterval(checkAuthInterval);
+                        if (!currentUser) {
+                            window.location.href = 'auth.html';
+                            return;
+                        }
+                        if (typeof setupCreatePostPage === 'function') {
+                            setupCreatePostPage();
+                        }
+                    }
+                }, 100);
+            } else {
+                if (typeof setupCreatePostPage === 'function') {
+                    setupCreatePostPage();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
