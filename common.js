@@ -886,8 +886,26 @@ async function handleRegister(event) {
         
         if (authError) throw authError;
         
+        // ✅ 新增：註冊成功後立即登出，清除 session
+        if (authData.user) {
+            await supabase.auth.signOut();
+            currentUser = null;
+            currentProfile = null;
+            currentTutorProfile = null;
+            saveAuthStateToStorage();
+            updateAuthUI();
+        }
+        
         showToast('註冊成功！請登入', 'success');
         switchAuthTab('login');
+        
+        // 清空表單
+        document.getElementById('registerEmail').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerName').value = '';
+        document.getElementById('registerPhone').value = '';
+        document.querySelectorAll('input[name="registerDistricts"]:checked').forEach(cb => cb.checked = false);
+        document.querySelectorAll('input[name="registerGrade"]:checked').forEach(cb => cb.checked = false);
         
     } catch (error) {
         console.error('Registration error:', error);

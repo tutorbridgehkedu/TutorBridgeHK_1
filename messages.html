@@ -15,6 +15,11 @@
     <link rel="manifest" href="tutorbridgehkicon3.png">
     <!-- 内联脚本：立即设置导航栏状态，防止闪烁 -->
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('tutorbridge_agreed')) {
+                window.location.href = 'agree.html';
+            }
+        });
         (function() {
             try {
                 const storedProfile = localStorage.getItem('tutorbridge_profile');
@@ -85,8 +90,15 @@
 
     <footer>
         <div class="container">
+            <div class="footer-content">
+                <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="terms.html" style="color: #94A3B8; text-decoration: none; font-size: 13px;">服務條款</a>
+                    <a href="disclaimer.html" style="color: #94A3B8; text-decoration: none; font-size: 13px;">免責聲明</a>
+                    <a href="privacy.html" style="color: #94A3B8; text-decoration: none; font-size: 13px;">私隱政策</a>
+                </div>
+            </div>
             <div class="footer-bottom">
-                © 2024 TutorBridgeHK. All rights reserved.
+                © 2026 TutorBridgeHK. All rights reserved.
             </div>
         </div>
     </footer>
@@ -116,6 +128,82 @@
                 }
             }
         });
+
+        // ==================== loadMessages (支援系統訊息) ====================
+        async function loadMessages() {
+            const list = document.getElementById('messagesList');
+            if (!list) return;
+            
+            list.innerHTML = '<div class="empty-state">載入中...</div>';
+            
+            try {
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select(`
+                        *,
+                        sender: sender_id (name),
+                        receiver: receiver_id (name)
+                    `)
+                    .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                if (!messages || messages.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">💬</div>
+                            <h3>暫無訊息</h3>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                list.innerHTML = messages.map(msg => {
+                    const isSender = msg.sender_id === currentUser.id;
+                    const isSystem = msg.sender_id === null;
+                    
+                    let senderName = '';
+                    let avatarLetter = '';
+                    
+                    if (isSystem) {
+                        // 系統訊息：顯示「思橋 TutorBridgeHK」
+                        senderName = '思橋 TutorBridgeHK';
+                        avatarLetter = '思';
+                    } else if (isSender) {
+                        senderName = '你';
+                        avatarLetter = '你';
+                    } else {
+                        const otherPerson = msg.sender || msg.receiver;
+                        senderName = escapeHtml(otherPerson?.name || '用戶');
+                        avatarLetter = (otherPerson?.name || 'U')[0].toUpperCase();
+                    }
+                    
+                    return `
+                        <div class="message-card ${!msg.is_read && !isSender && !isSystem ? 'unread' : ''}">
+                            <div class="message-avatar">${avatarLetter}</div>
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <span class="message-sender">${senderName}</span>
+                                    <span class="message-time">${formatDate(msg.created_at)}</span>
+                                </div>
+                                <p class="message-text">${escapeHtml(msg.content)}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>載入失敗</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
     </script>
 </body>
 </html>

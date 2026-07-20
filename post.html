@@ -15,6 +15,11 @@
     <link rel="manifest" href="tutorbridgehkicon3.png">
     <!-- 内联脚本：立即设置导航栏状态，防止闪烁 -->
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('tutorbridge_agreed')) {
+                window.location.href = 'agree.html';
+            }
+        });
         (function() {
             try {
                 const storedProfile = localStorage.getItem('tutorbridge_profile');
@@ -182,8 +187,16 @@
 
     <footer>
         <div class="container">
+            <div class="footer-content">
+                <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="terms.html" style="color: #94A3B8; text-decoration: none; font-size: 13px;">服務條款</a>
+                    <a href="disclaimer.html" style="color: #94A3B8; text-decoration: none; font-size: 13px;">免責聲明</a>
+                    <a href="privacy.html" style="color: #94A3B8; text-decoration: none; font-size: 13px;">私隱政策</a>
+                </div>
+                <h1></h1>
+            </div>
             <div class="footer-bottom">
-                © 2024 TutorBridgeHK. All rights reserved.
+                © 2026 TutorBridgeHK. All rights reserved.
             </div>
         </div>
     </footer>
