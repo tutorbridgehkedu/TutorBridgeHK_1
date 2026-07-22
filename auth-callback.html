@@ -3,59 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>處理登入中 — TutorBridgeHK</title>
+    <title>登入處理中 - TutorBridgeHK</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="style.css">
-    <script src="common.js"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="tutorbridgehkicon3.png">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .loading-container {
+            text-align: center;
+            color: white;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <div style="text-align: center; padding: 80px 20px;">
-        <h2>⏳ 處理登入中...</h2>
-        <p style="color: var(--gray-600);">請稍候</p>
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <h2>登入處理中...</h2>
+        <p>請稍候，我們正在確認您的身份</p>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 等待 initSupabase 完成
-            await new Promise(resolve => {
-                const check = () => {
-                    if (supabase) {
-                        resolve();
-                    } else {
-                        setTimeout(check, 100);
+        const SUPABASE_URL = 'https://aweqbxyjeohsnevnkwor.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_1tMcgJ9Gv5vfi-pKrPqOTA_BdhZqPoM';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function handleAuthCallback() {
+            try {
+                // 獲取當前 session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) throw sessionError;
+                
+                if (!session) {
+                    console.error('❌ 沒有找到 session');
+                    window.location.href = 'auth.html';
+                    return;
+                }
+
+                console.log('✅ 找到 session:', session.user);
+                
+                // 檢查 profiles 表中是否有該用戶的記錄
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profileError) {
+                    // 如果找不到記錄，跳轉到選擇身份頁面
+                    if (profileError.code === 'PGRST116') {
+                        console.log('⚠️ 用戶沒有 profile 記錄，跳轉到選擇身份頁面');
+                        window.location.href = 'choose-role.html';
+                        return;
                     }
-                };
-                check();
-            });
+                    throw profileError;
+                }
 
-            // 獲取當前 session
-            const { data: { session } } = await supabase.auth.getSession();
+                if (profile) {
+                    console.log('✅ 找到 profile 記錄:', profile);
+                    // 保存到 localStorage
+                    localStorage.setItem('tutorbridge_profile', JSON.stringify(profile));
+                    
+                    // 如果是導師，還需要載入 tutor_profiles
+                    if (profile.role === 'tutor') {
+                        const { data: tutorProfile, error: tutorError } = await supabase
+                            .from('tutor_profiles')
+                            .select('*')
+                            .eq('user_id', session.user.id)
+                            .single();
+                        
+                        if (!tutorError && tutorProfile) {
+                            localStorage.setItem('tutorbridge_tutor_profile', JSON.stringify(tutorProfile));
+                        }
+                    }
+                    
+                    console.log('✅ 直接登入，跳轉到首頁');
+                    window.location.href = 'index.html';
+                }
 
-            if (!session) {
+            } catch (error) {
+                console.error('❌ 處理登入回調失敗:', error);
                 window.location.href = 'auth.html';
-                return;
             }
+        }
 
-            const user = session.user;
-
-            // 檢查 profiles 表有冇呢個用戶
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', user.id)
-                .single();
-
-            if (profile) {
-                // 已有 profile，直接登入
-                currentUser = user;
-                await loadProfile(user.id);
-                updateAuthUI();
-                window.location.href = 'index.html';
-            } else {
-                // 冇 profile，去選擇身份
-                window.location.href = 'choose-role.html';
-            }
-        });
+        // 頁面載入後執行
+        handleAuthCallback();
     </script>
 </body>
 </html>
