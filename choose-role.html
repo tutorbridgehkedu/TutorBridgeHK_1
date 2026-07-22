@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>選擇身份 — TutorBridgeHK</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" sizes="32x32" href="tutorbridgehkicon3.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="tutorbridgehkicon3.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="tutorbridgehkicon3.png">
+    <link rel="manifest" href="tutorbridgehkicon3.png">
+    <style>
+        .role-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; background: var(--background-color); }
+        .role-container { max-width: 500px; width: 100%; background: var(--white); border-radius: 16px; padding: 48px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; }
+        .role-container h1 { font-size: 24px; color: var(--gray-800); margin-bottom: 8px; }
+        .role-container .subtitle { color: var(--gray-600); margin-bottom: 32px; }
+        .role-options { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+        .role-option { display: flex; align-items: center; gap: 16px; padding: 20px 24px; border: 3px solid var(--gray-200); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; background: var(--white); }
+        .role-option:hover { border-color: var(--primary-color); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .role-option.selected { border-color: var(--primary-color); background: #DBEAFE; }
+        .role-option .icon { font-size: 32px; }
+        .role-option .info { text-align: left; flex: 1; }
+        .role-option .info h3 { font-size: 18px; color: var(--gray-800); }
+        .role-option .info p { font-size: 14px; color: var(--gray-600); }
+        .role-option input[type="radio"] { width: 20px; height: 20px; accent-color: var(--primary-color); flex-shrink: 0; cursor: pointer; }
+        .btn-continue { width: 100%; padding: 14px; background: var(--primary-color); color: var(--white); border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; }
+        .btn-continue:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(37,99,235,0.4); }
+        .btn-continue:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        @media (max-width: 600px) { .role-container { padding: 32px 20px; } .role-option { padding: 16px; } }
+    </style>
+</head>
+<body>
+    <div class="role-page">
+        <div class="role-container">
+            <h1>👋 歡迎加入思橋</h1>
+            <p class="subtitle">請選擇你的身份</p>
+
+            <form id="roleForm" onsubmit="handleRoleSubmit(event)">
+                <div class="role-options">
+                    <label class="role-option" onclick="selectRole('student')">
+                        <input type="radio" name="role" value="student" required>
+                        <span class="icon">📚</span>
+                        <div class="info"><h3>學生</h3><p>尋找補習導師，發布補習請求</p></div>
+                    </label>
+                    <label class="role-option" onclick="selectRole('tutor')">
+                        <input type="radio" name="role" value="tutor" required>
+                        <span class="icon">🎓</span>
+                        <div class="info"><h3>導師</h3><p>提供補習服務，尋找學生</p></div>
+                    </label>
+                </div>
+                <button type="submit" class="btn-continue" id="continueBtn" disabled>繼續</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        function selectRole(role) {
+            document.querySelectorAll('input[name="role"]').forEach(r => r.checked = false);
+            document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+            const radio = document.querySelector(`input[name="role"][value="${role}"]`);
+            if (radio) {
+                radio.checked = true;
+                radio.closest('.role-option').classList.add('selected');
+            }
+            document.getElementById('continueBtn').disabled = false;
+        }
+
+        async function handleRoleSubmit(event) {
+            event.preventDefault();
+
+            const selected = document.querySelector('input[name="role"]:checked');
+            if (!selected) return;
+
+            const role = selected.value;
+
+            try {
+                // 直接從 Supabase 獲取當前用戶（唔靠 currentUser）
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                
+                if (userError || !user) {
+                    showToast('請先登入', 'error');
+                    window.location.href = 'auth.html';
+                    return;
+                }
+
+                // 1. 生成 user_code
+                const prefix = role === 'student' ? 'S' : 'T';
+                let userCode = prefix + '0001';
+
+                try {
+                    const { data: counterData, error: counterError } = await supabase
+                        .from('counter')
+                        .select('current_value')
+                        .eq('id', role)
+                        .single();
+
+                    if (!counterError && counterData) {
+                        const nextValue = (counterData.current_value || 0) + 1;
+                        userCode = prefix + String(nextValue).padStart(4, '0');
+                        await supabase
+                            .from('counter')
+                            .update({ current_value: nextValue })
+                            .eq('id', role);
+                    }
+                } catch (counterError) {
+                    console.warn('⚠️ Counter 讀取失敗，使用預設值:', counterError);
+                }
+
+                // 2. 建立 profile
+                const name = user.user_metadata?.name || user.email?.split('@')[0] || '用戶';
+
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .insert({
+                        id: user.id,
+                        email: user.email,
+                        name: name,
+                        phone: '',
+                        role: role,
+                        user_code: userCode,
+                        districts: [],
+                        grade: role === 'student' ? '' : null
+                    });
+
+                if (profileError) throw profileError;
+
+                // 3. 如果是導師，建立 tutor_profiles
+                if (role === 'tutor') {
+                    const { error: tutorError } = await supabase
+                        .from('tutor_profiles')
+                        .insert({
+                            user_id: user.id,
+                            subjects: [],
+                            hourly_rate: 0,
+                            qualification: '',
+                            teaching_experience: '',
+                            self_introduction: '',
+                            can_teach_grades: [],
+                            is_paid: false,
+                            avatar_url: null
+                        });
+
+                    if (tutorError) throw tutorError;
+                }
+
+                // 4. 更新 currentUser 同 currentProfile
+                currentUser = user;
+                await loadProfile(user.id);
+                updateAuthUI();
+
+                if (role === 'tutor') {
+                    showToast('請完善你的導師資料', 'success');
+                    window.location.href = 'profile.html';
+                } else {
+                    showToast('註冊成功！', 'success');
+                    window.location.href = 'index.html';
+                }
+
+            } catch (error) {
+                console.error('❌ 建立 profile 失敗:', error);
+                showToast(error.message || '建立帳戶失敗，請稍後再試', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

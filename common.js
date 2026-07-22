@@ -558,36 +558,74 @@ function hasContactInfo(text) {
 
 async function generateAndSetUserCode(role) {
     try {
+        console.log('🔢 開始生成 user_code，role:', role);
+        console.log('📋 currentUser:', currentUser);
+        console.log('📋 currentProfile:', currentProfile);
+
+        // ✅ 檢查 counter 表是否存在，如果冇就建立
         const { data: counterData, error: counterError } = await supabase
             .from('counter')
             .select('current_value')
             .eq('id', role)
-            .single();
+            .maybeSingle();  // ✅ 用 maybeSingle() 代替 single() 防止 error
+
+        let nextValue = 1;
         
-        if (counterError) throw counterError;
-        
-        const nextValue = (counterData.current_value || 0) + 1;
+        if (counterError) {
+            console.warn('⚠️ Counter 讀取失敗，嘗試建立:', counterError);
+            // 嘗試建立 counter 記錄
+            const { error: insertError } = await supabase
+                .from('counter')
+                .insert({ id: role, current_value: 0 });
+            
+            if (insertError) {
+                console.error('❌ 建立 counter 失敗:', insertError);
+                // 用 fallback 方法
+                const prefix = role === 'student' ? 'S' : 'T';
+                const fallbackCode = prefix + '0001';
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({ user_code: fallbackCode })
+                    .eq('id', currentUser.id);
+                
+                if (updateError) throw updateError;
+                await loadProfile(currentUser.id);
+                return;
+            }
+        } else if (counterData) {
+            nextValue = (counterData.current_value || 0) + 1;
+        }
+
         const prefix = role === 'student' ? 'S' : 'T';
         const userCode = prefix + String(nextValue).padStart(4, '0');
-        
+        console.log('✅ 生成 user_code:', userCode);
+
+        // 更新 counter
         const { error: updateCounterError } = await supabase
             .from('counter')
             .update({ current_value: nextValue })
             .eq('id', role);
-        
-        if (updateCounterError) throw updateCounterError;
-        
+
+        if (updateCounterError) {
+            console.error('❌ 更新 counter 失敗:', updateCounterError);
+        }
+
+        // 更新 user_code
         const { error: updateProfileError } = await supabase
             .from('profiles')
             .update({ user_code: userCode })
             .eq('id', currentUser.id);
-        
-        if (updateProfileError) throw updateProfileError;
-        
+
+        if (updateProfileError) {
+            console.error('❌ 更新 user_code 失敗:', updateProfileError);
+            throw updateProfileError;
+        }
+
+        console.log('✅ user_code 更新成功！');
         await loadProfile(currentUser.id);
-        
+
     } catch (error) {
-        console.error('Error generating user code:', error);
+        console.error('❌ 生成 user_code 失敗:', error);
     }
 }
 
@@ -748,13 +786,11 @@ async function signInWithGoogle() {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/index.html'
+                redirectTo: window.location.origin + '/auth-callback.html'
             }
         });
         
         if (error) throw error;
-        
-        // Google 會自動跳轉去 Google 登入頁面，唔使 showToast
     } catch (error) {
         console.error('❌ Google 登入失敗:', error);
         showToast(error.message, 'error');

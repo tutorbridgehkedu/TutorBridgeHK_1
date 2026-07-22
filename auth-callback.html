@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>處理登入中 — TutorBridgeHK</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="common.js"></script>
+</head>
+<body>
+    <div style="text-align: center; padding: 80px 20px;">
+        <h2>⏳ 處理登入中...</h2>
+        <p style="color: var(--gray-600);">請稍候</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 等待 initSupabase 完成
+            await new Promise(resolve => {
+                const check = () => {
+                    if (supabase) {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+
+            // 獲取當前 session
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session) {
+                window.location.href = 'auth.html';
+                return;
+            }
+
+            const user = session.user;
+
+            // 檢查 profiles 表有冇呢個用戶
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                // 已有 profile，直接登入
+                currentUser = user;
+                await loadProfile(user.id);
+                updateAuthUI();
+                window.location.href = 'index.html';
+            } else {
+                // 冇 profile，去選擇身份
+                window.location.href = 'choose-role.html';
+            }
+        });
+    </script>
+</body>
+</html>
