@@ -128,6 +128,21 @@ async function checkAuth() {
             currentUser = session.user;
             await loadProfile(currentUser.id);
             
+            // ✅ 檢查是否 Google 登入用戶（冇電話/冇角色/冇名）
+            if (currentProfile) {
+                // 如果係 Google 登入但未完成 profile
+                const isGoogleUser = !currentProfile.phone || 
+                                     !currentProfile.name || 
+                                     currentProfile.name === '用戶' ||
+                                     !currentProfile.user_code;
+                
+                if (isGoogleUser) {
+                    console.log('⚠️ Google 用戶未完成 profile，跳轉到個人檔案');
+                    // 儲存一個 flag 表示需要完善資料
+                    localStorage.setItem('tutorbridge_needs_profile_setup', 'true');
+                }
+            }
+            
             if (currentProfile) {
                 if (currentProfile.role === 'student') {
                     currentTabType = 'tutor_wanted';
@@ -152,6 +167,16 @@ async function checkAuth() {
     isAuthReady = true;
     updateAuthUI();
     
+    // ✅ 如果係 Google 用戶需要完善資料，跳轉到 profile.html
+    if (currentUser && localStorage.getItem('tutorbridge_needs_profile_setup') === 'true') {
+        localStorage.removeItem('tutorbridge_needs_profile_setup');
+        // 唔直接跳轉，等 updateAuthUI 完成先
+        setTimeout(() => {
+            showToast('請完善個人資料（電話號碼及身份）', 'warning');
+            window.location.href = 'profile.html';
+        }, 500);
+    }
+    
     console.log('🔗 設定 onAuthStateChange 監聽');
     supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('📡 onAuthStateChange 事件:', event);
@@ -159,6 +184,19 @@ async function checkAuth() {
             console.log('✅ 新 session 建立');
             currentUser = session.user;
             await loadProfile(currentUser.id);
+            
+            // ✅ 同樣檢查 Google 用戶
+            if (currentProfile) {
+                const isGoogleUser = !currentProfile.phone || 
+                                     !currentProfile.name || 
+                                     currentProfile.name === '用戶' ||
+                                     !currentProfile.user_code;
+                
+                if (isGoogleUser) {
+                    console.log('⚠️ Google 用戶未完成 profile，跳轉到個人檔案');
+                    localStorage.setItem('tutorbridge_needs_profile_setup', 'true');
+                }
+            }
             
             if (currentProfile) {
                 if (currentProfile.role === 'student') {
@@ -2139,6 +2177,30 @@ async function handleCreatePost(event) {
         return; 
     }
     
+    // ✅ 直接從 Supabase 查詢用戶嘅電話號碼
+    const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('id', currentUser.id)
+        .single();
+    
+    if (profileError) {
+        console.error('❌ 查詢用戶資料失敗:', profileError);
+        showToast('無法驗證用戶資料，請稍後再試', 'error');
+        return;
+    }
+    
+    // ✅ 檢查電話號碼
+    if (!userProfile?.phone || userProfile.phone.trim() === '') {
+        console.log('❌ 用戶未填寫電話號碼');
+        showToast('請先在個人檔案填寫電話號碼，才能發布 Post', 'warning');
+        setTimeout(() => {
+            window.location.href = 'profile.html';
+        }, 1500);
+        return;
+    }
+    
+    // Validate post type matches user role
     if (currentProfile?.role === 'student' && selectedPostType !== 'tutor_wanted') {
         showToast('學生只能發布「學生個案」', 'error');
         return;
@@ -2148,6 +2210,7 @@ async function handleCreatePost(event) {
         return;
     }
 
+    // Validate districts
     if (selectedPostDistricts.length === 0) {
         showToast('請至少選擇一個地區', 'error');
         return;
@@ -2170,6 +2233,7 @@ async function handleCreatePost(event) {
     }
     
     try {
+        // Generate short post ID
         const postCode = await generateAndSetPostCode();
         console.log('🏷️ 生成的 postCode:', postCode);
         
