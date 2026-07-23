@@ -1502,92 +1502,6 @@ function setupCreatePostPage() {
     initPostDistrictOptions();
 }
 
-async function handleCreatePost(event) {
-    event.preventDefault();
-    console.log('📝 handleCreatePost 開始');
-    console.log('👤 currentUser:', currentUser);
-    console.log('👤 currentProfile:', currentProfile);
-    console.log('📋 selectedPostType:', selectedPostType);
-    console.log('📍 selectedPostDistricts:', selectedPostDistricts);
-    
-    if (!currentUser) { 
-        console.log('❌ 未登入，跳轉到 auth 頁面');
-        window.location.href = 'auth.html';
-        showToast('請先登入', 'warning'); 
-        return; 
-    }
-    
-    // Validate post type matches user role
-    if (currentProfile?.role === 'student' && selectedPostType !== 'tutor_wanted') {
-        showToast('學生只能發布「學生個案」', 'error');
-        return;
-    }
-    if (currentProfile?.role === 'tutor' && selectedPostType !== 'student_wanted') {
-        showToast('導師只能發布「導師列表」', 'error');
-        return;
-    }
-
-    // Validate districts
-    if (selectedPostDistricts.length === 0) {
-        showToast('請至少選擇一個地區', 'error');
-        return;
-    }
-    
-    const title = document.getElementById('postTitle')?.value || '';
-    const subject = document.getElementById('postSubject')?.value || '';
-    const teachingMode = document.getElementById('postTeachingMode')?.value || '';
-    const description = document.getElementById('postDescription')?.value || '';
-    const qualification = document.getElementById('postQualification')?.value || '';
-    const budgetOrRateInput = selectedPostType === 'tutor_wanted' ? 
-        document.getElementById('postBudget') : 
-        document.getElementById('postRate');
-    const budgetOrRate = budgetOrRateInput?.value || '';
-    const teachingExperience = document.getElementById('postExperience')?.value || '';
-    
-    if (hasContactInfo(title) || hasContactInfo(description) || hasContactInfo(qualification) || hasContactInfo(teachingExperience)) {
-        showToast('請勿在Post中留下聯絡方式', 'error');
-        return;
-    }
-    
-    try {
-        // Generate short post ID
-        const postCode = await generateAndSetPostCode();
-        console.log('🏷️ 生成的 postCode:', postCode);
-        
-        const postData = {
-            user_id: currentUser.id,
-            type: selectedPostType,
-            title,
-            subject,
-            teaching_mode: teachingMode,
-            districts: selectedPostDistricts,
-            district: selectedPostDistricts[0] || '',
-            description,
-            status: 'active'
-        };
-        
-        if (postCode) postData.post_code = postCode;
-        if (budgetOrRate) postData.budget_or_rate = parseInt(budgetOrRate);
-        if (qualification) postData.qualification = qualification;
-        if (teachingExperience) postData.teaching_experience = teachingExperience;
-        
-        console.log('📝 即將插入的 postData:', postData);
-        
-        const { error } = await supabase
-            .from('posts')
-            .insert(postData);
-        
-        if (error) throw error;
-        
-        console.log('✅ Post 發布成功！');
-        showToast('Post 發布成功！', 'success');
-        window.location.href = 'match.html';
-        
-    } catch (error) {
-        console.error('❌ Error creating post:', error);
-        showToast(error.message, 'error');
-    }
-}
 
 async function viewPost(postId) {
     window.location.href = `detail.html?id=${postId}`;
@@ -2186,7 +2100,7 @@ async function handleCreatePost(event) {
     // ✅ 檢查電話號碼
     if (!userProfile?.phone || userProfile.phone.trim() === '') {
         console.log('❌ 用戶未填寫電話號碼');
-        showToast('請先在個人檔案填寫電話號碼，才能發布 Post', 'warning');
+        showToast('請先在個人檔案填寫電話號碼', 'warning');
         setTimeout(() => {
             window.location.href = 'profile.html';
         }, 1500);
