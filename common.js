@@ -781,13 +781,11 @@ async function signInWithGoogle() {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/index.html'
+                redirectTo: window.location.origin + '/auth-callback.html'  // ← 改為 auth-callback.html
             }
         });
         
         if (error) throw error;
-        
-        // Google 會自動跳轉去 Google 登入頁面，唔使 showToast
     } catch (error) {
         console.error('❌ Google 登入失敗:', error);
         showToast(error.message, 'error');

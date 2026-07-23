@@ -176,6 +176,18 @@
     <script src="common.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // ✅ 檢查是否 Google 用戶需要完善資料
+            if (localStorage.getItem('tutorbridge_needs_profile_setup') === 'true') {
+                localStorage.removeItem('tutorbridge_needs_profile_setup');
+                showToast('請填寫電話號碼及選擇身份', 'warning');
+                // 延遲確保頁面已載入，然後自動開啟編輯模式
+                setTimeout(() => {
+                    if (typeof toggleEditProfile === 'function') {
+                        toggleEditProfile();
+                    }
+                }, 800);
+            }
+
             // 先檢查是否已登入
             if (!currentUser) {
                 // 我們需要等待 checkAuth 完成
