@@ -1449,29 +1449,25 @@ function handlePostDistrictChange(checkbox) {
 
 function setupCreatePostPage() {
     const titleEl = document.getElementById('createPostTitle');
+    const qualificationLabel = document.querySelector('#qualificationField label');
     
     if (currentProfile?.role === 'student') {
-        // Students can only create tutor_wanted posts
+        // 學生 Post：顯示「導師要求」
         selectedPostType = 'tutor_wanted';
         if (titleEl) titleEl.textContent = '發布學生個案';
-        const budgetField = document.getElementById('budgetField');
-        const rateField = document.getElementById('rateField');
-        const experienceField = document.getElementById('experienceField');
-        if (budgetField) budgetField.style.display = 'block';
-        if (rateField) rateField.style.display = 'none';
-        if (experienceField) experienceField.style.display = 'none';
+        if (qualificationLabel) qualificationLabel.textContent = '導師要求';
+        document.getElementById('budgetField').style.display = 'block';
+        document.getElementById('rateField').style.display = 'none';
+        document.getElementById('experienceField').style.display = 'none';
     } else if (currentProfile?.role === 'tutor') {
-        // Tutors can only create student_wanted posts
+        // 導師 Post：顯示「導師學歷」
         selectedPostType = 'student_wanted';
         if (titleEl) titleEl.textContent = '發布導師列表';
-        const budgetField = document.getElementById('budgetField');
-        const rateField = document.getElementById('rateField');
-        const experienceField = document.getElementById('experienceField');
-        if (budgetField) budgetField.style.display = 'none';
-        if (rateField) rateField.style.display = 'block';
-        if (experienceField) experienceField.style.display = 'block';
+        if (qualificationLabel) qualificationLabel.textContent = '導師學歷';
+        document.getElementById('budgetField').style.display = 'none';
+        document.getElementById('rateField').style.display = 'block';
+        document.getElementById('experienceField').style.display = 'block';
     }
-    // Initialize district options
     initPostDistrictOptions();
 }
 
@@ -2354,10 +2350,12 @@ async function loadProfilePage() {
                             <div class="detail-label">角色</div>
                             <div class="detail-value">${currentProfile.role === 'tutor' ? '導師' : '學生'}</div>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">可補習地區</div>
-                            <div class="detail-value">${currentProfile.role === 'student' ? (locationDisplay || '未設定') : '請到「編輯導師檔案」管理'}</div>
-                        </div>
+                        ${currentProfile.role === 'student' ? `
+                            <div class="detail-item">
+                                <div class="detail-label">可補習地區</div>
+                                <div class="detail-value">${locationDisplay || '未設定'}</div>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
                 
