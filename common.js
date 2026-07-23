@@ -128,17 +128,14 @@ async function checkAuth() {
             currentUser = session.user;
             await loadProfile(currentUser.id);
             
-            // ✅ 檢查是否 Google 登入用戶（冇電話/冇角色/冇名）
+            // ✅ 更準確嘅 Google 用戶判斷
             if (currentProfile) {
-                // 如果係 Google 登入但未完成 profile
-                const isGoogleUser = !currentProfile.phone || 
-                                     !currentProfile.name || 
-                                     currentProfile.name === '用戶' ||
-                                     !currentProfile.user_code;
+                const isGoogleUser = currentProfile.role === 'student' && 
+                                     !currentProfile.user_code && 
+                                     (!currentProfile.phone || currentProfile.phone === '');
                 
                 if (isGoogleUser) {
                     console.log('⚠️ Google 用戶未完成 profile，跳轉到個人檔案');
-                    // 儲存一個 flag 表示需要完善資料
                     localStorage.setItem('tutorbridge_needs_profile_setup', 'true');
                 }
             }
@@ -170,7 +167,6 @@ async function checkAuth() {
     // ✅ 如果係 Google 用戶需要完善資料，跳轉到 profile.html
     if (currentUser && localStorage.getItem('tutorbridge_needs_profile_setup') === 'true') {
         localStorage.removeItem('tutorbridge_needs_profile_setup');
-        // 唔直接跳轉，等 updateAuthUI 完成先
         setTimeout(() => {
             showToast('請完善個人資料（電話號碼及身份）', 'warning');
             window.location.href = 'profile.html';
@@ -187,10 +183,9 @@ async function checkAuth() {
             
             // ✅ 同樣檢查 Google 用戶
             if (currentProfile) {
-                const isGoogleUser = !currentProfile.phone || 
-                                     !currentProfile.name || 
-                                     currentProfile.name === '用戶' ||
-                                     !currentProfile.user_code;
+                const isGoogleUser = currentProfile.role === 'student' && 
+                                     !currentProfile.user_code && 
+                                     (!currentProfile.phone || currentProfile.phone === '');
                 
                 if (isGoogleUser) {
                     console.log('⚠️ Google 用戶未完成 profile，跳轉到個人檔案');
