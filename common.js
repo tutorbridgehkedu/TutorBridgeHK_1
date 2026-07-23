@@ -748,7 +748,7 @@ async function signInWithGoogle() {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/auth-callback.html'
+                redirectTo: window.location.origin + '/index.html'
             }
         });
         
@@ -1011,15 +1011,52 @@ async function handleUpdateProfile(event) {
     try {
         const name = document.getElementById('editName').value;
         const phone = document.getElementById('editPhone').value;
-        const districts = currentProfile?.role === 'student' ? (currentProfile?.districts || []) : (currentProfile?.districts || []);
+        const newRole = document.getElementById('editRole')?.value;
+        const districts = currentProfile?.districts || [];
+        const grade = currentProfile?.role === 'student' ? document.getElementById('editGrade')?.value : null;
+        
         const updateData = {
             name,
-            phone
+            phone,
+            districts,
+            district: districts[0] || currentProfile?.district || ''
         };
 
-        if (currentProfile?.role === 'student') {
-            updateData.districts = districts;
-            updateData.district = districts[0] || currentProfile?.district || '';
+        // ✅ 如果更改了身份
+        if (newRole && newRole !== currentProfile.role) {
+            updateData.role = newRole;
+            
+            if (newRole === 'tutor') {
+                // 轉做導師：檢查有冇 tutor_profiles
+                const { data: existingTutor } = await supabase
+                    .from('tutor_profiles')
+                    .select('id')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+                
+                if (!existingTutor) {
+                    await supabase
+                        .from('tutor_profiles')
+                        .insert({
+                            user_id: currentUser.id,
+                            subjects: [],
+                            hourly_rate: 0,
+                            qualification: '',
+                            teaching_experience: '',
+                            self_introduction: '',
+                            can_teach_grades: [],
+                            is_paid: false,
+                            avatar_url: null
+                        });
+                }
+                showToast('已轉為導師，請完善導師資料', 'success');
+            } else if (newRole === 'student') {
+                showToast('已轉為學生', 'success');
+            }
+        }
+        
+        if (currentProfile?.role === 'student' || newRole === 'student') {
+            updateData.grade = grade || '';
         }
         
         const { error } = await supabase
@@ -1033,6 +1070,7 @@ async function handleUpdateProfile(event) {
         showToast('個人資料已更新！', 'success');
         toggleEditProfile();
         loadProfilePage();
+        
     } catch (error) {
         console.error('Error updating profile:', error);
         showToast(error.message, 'error');
@@ -2332,6 +2370,15 @@ async function loadProfilePage() {
                         <div class="form-group">
                             <label>電話號碼</label>
                             <input type="tel" class="form-control" id="editPhone" value="${escapeHtml(currentProfile.phone || '')}" required>
+                        </div>
+                        <!-- ✅ 加入身份選擇 -->
+                        <div class="form-group">
+                            <label>身份</label>
+                            <select class="form-control" id="editRole">
+                                <option value="student" ${currentProfile.role === 'student' ? 'selected' : ''}>學生</option>
+                                <option value="tutor" ${currentProfile.role === 'tutor' ? 'selected' : ''}>導師</option>
+                            </select>
+                            <p style="font-size: 12px; color: var(--gray-600); margin-top: 4px;">⚠️ 更改身份後，導師相關資料（可教科目、收費等）可能需要重新填寫</p>
                         </div>
                         ${currentProfile.role === 'student' ? `
                             <div class="form-group">
